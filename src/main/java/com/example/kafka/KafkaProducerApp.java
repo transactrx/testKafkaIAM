@@ -20,13 +20,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class KafkaProducerApp {
     private static final String TOPIC_NAME = "testingtesting";
     //private static final String BOOTSTRAP_SERVERS ="boot-ahs.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099,boot-8rg.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100,boot-rce.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098";
-    private static final String BOOTSTRAP_SERVERS ="b-1.powerlinedevkafka.ssvk5i.c19.kafka.us-east-1.amazonaws.com:9096,b-2.powerlinedevkafka.ssvk5i.c19.kafka.us-east-1.amazonaws.com:9096,b-3.powerlinedevkafka.ssvk5i.c19.kafka.us-east-1.amazonaws.com:9096";
+    private static final String BOOTSTRAP_SERVERS ="boot-6li.powerlinedevkafka.mqhv5a.c19.kafka.us-east-1.amazonaws.com:9096,boot-7xp.powerlinedevkafka.mqhv5a.c19.kafka.us-east-1.amazonaws.com:9096,boot-2f1.powerlinedevkafka.mqhv5a.c19.kafka.us-east-1.amazonaws.com:9096";
     private static final AtomicInteger MESSAGE_COUNTER = new AtomicInteger(0);
     private static final AtomicInteger SUCCESS_COUNTER = new AtomicInteger(0);
     private static final AtomicInteger ERROR_COUNTER = new AtomicInteger(0);
 
     public static void main(String[] args) {
-        int numThreads = 4; // Default number of threads
+        int numThreads = 32; // Default: match number of partitions for optimal parallelism
         int totalMessages = 50000; // Default total number of messages
 
         // Parse command line arguments if provided
@@ -82,20 +82,29 @@ public class KafkaProducerApp {
         // Set AWS region explicitly
         System.setProperty("aws.region", "us-east-1");
         
-        // Set much shorter client timeout values for quicker failure detection
-        props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, "5000");
-        props.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "100");
-        props.put(ProducerConfig.RECONNECT_BACKOFF_MS_CONFIG, "100");
-        props.put(ProducerConfig.RECONNECT_BACKOFF_MAX_MS_CONFIG, "1000");
-        props.put(ProducerConfig.RETRIES_CONFIG, "2");
-        props.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, "3000");
+        // Performance-optimized producer configuration
+        props.put(ProducerConfig.LINGER_MS_CONFIG, "5"); // Wait to batch more records
+        props.put(ProducerConfig.BATCH_SIZE_CONFIG, 32 * 1024); // 32KB batch size
+        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 128 * 1024 * 1024); // 128MB buffer
+        props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy"); // Efficient compression
+        props.put(ProducerConfig.ACKS_CONFIG, "1"); // Only wait for leader acknowledgment
+        
+        // More efficient error handling and retries for performance
+        props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, "10000");
+        props.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, "50");
+        props.put(ProducerConfig.RECONNECT_BACKOFF_MS_CONFIG, "50");
+        props.put(ProducerConfig.RECONNECT_BACKOFF_MAX_MS_CONFIG, "500");
+        props.put(ProducerConfig.RETRIES_CONFIG, "3");
+        props.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, "5000");
+        props.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "5"); // Multiple in-flight requests
         props.put("socket.connection.setup.timeout.ms", "3000");
         props.put("socket.connection.setup.timeout.max.ms", "5000");
 
         try (AdminClient adminClient = AdminClient.create(props)) {
-            Optional<Integer> replicas = Optional.of(1);
+            // Increased number of partitions for better parallelism and throughput
+            Optional<Integer> partitions = Optional.of(32); // Using 32 partitions for high throughput
             Optional<Short> repFactor = Optional.of(Short.parseShort("1"));
-            NewTopic newTopic = new NewTopic(TOPIC_NAME, replicas, repFactor);
+            NewTopic newTopic = new NewTopic(TOPIC_NAME, partitions, repFactor);
 
             CreateTopicsResult result = adminClient.createTopics(Collections.singleton(newTopic));
 
@@ -126,62 +135,74 @@ public class KafkaProducerApp {
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         CountDownLatch latch = new CountDownLatch(numThreads);
         
-        // Create a single shared KafkaProducer for all threads
-        try (KafkaProducer<String, String> sharedProducer = new KafkaProducer<>(props)) {
-            System.out.println("Created shared Kafka producer for all threads");
+        // Each thread gets its own producer for better parallelism
+        System.out.println("Creating dedicated Kafka producers for each thread");
+        
+        // Create and submit producer tasks
+        for (int i = 0; i < numThreads; i++) {
+            // Last thread gets any remaining messages
+            int threadMessages = messagesPerThread + (i == numThreads - 1 ? remainingMessages : 0);
+            int threadId = i + 1;
             
-            // Create and submit producer tasks
-            for (int i = 0; i < numThreads; i++) {
-                // Last thread gets any remaining messages
-                int threadMessages = messagesPerThread + (i == numThreads - 1 ? remainingMessages : 0);
-                int threadId = i + 1;
-                
-                executor.submit(() -> {
+            executor.submit(() -> {
+                // Create dedicated producer for each thread
+                try (KafkaProducer<String, String> threadProducer = new KafkaProducer<>(props)) {
                     try {
-                        produceMessages(sharedProducer, threadId, threadMessages);
+                        produceMessages(threadProducer, threadId, threadMessages);
                     } finally {
                         latch.countDown();
                     }
-                });
-            }
+                }
+            });
+        }
             
-            // Wait for all threads to complete
-            try {
-                latch.await();
-            } catch (InterruptedException e) {
-                System.err.println("Thread interrupted while waiting for completion: " + e.getMessage());
-            } finally {
-                executor.shutdown();
-            }
-            
-            System.out.println("All threads completed. Closing shared Kafka producer.");
-        } // sharedProducer will be automatically closed here
+        // Wait for all threads to complete
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            System.err.println("Thread interrupted while waiting for completion: " + e.getMessage());
+        } finally {
+            executor.shutdown();
+        }
+        
+        System.out.println("All threads completed with dedicated producers.");
     }
     
     private static void produceMessages(KafkaProducer<String, String> producer, int threadId, int messageCount) {
         System.out.println("Thread " + threadId + " starting to send " + messageCount + " messages");
         
-        for (int i = 0; i < messageCount; i++) {
-            int messageId = MESSAGE_COUNTER.incrementAndGet();
-            String key = "key-" + messageId;
-            String value = "asd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsd";
+        // Use thread ID to ensure keys are distributed across partitions
+        String threadPrefix = "thread-" + threadId + "-";
+        String value = "asd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsd";
+        
+        // Batch messages for faster sending (100 messages at a time)
+        final int BATCH_SIZE = 100;
+        for (int i = 0; i < messageCount; i += BATCH_SIZE) {
+            int batchEnd = Math.min(i + BATCH_SIZE, messageCount);
             
-            ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, key, value);
-            
-            try {
-                producer.send(record).get();
-                SUCCESS_COUNTER.incrementAndGet();
+            for (int j = i; j < batchEnd; j++) {
+                int messageId = MESSAGE_COUNTER.incrementAndGet();
+                // Include thread ID in key to ensure better partition distribution
+                String key = threadPrefix + "key-" + messageId;
                 
-                // Print progress every 1000 messages
-                if (messageId % 1000 == 0) {
-                    System.out.println("Thread " + threadId + " progress: " + i + "/" + messageCount);
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                ERROR_COUNTER.incrementAndGet();
-                System.err.println("Thread " + threadId + " error sending message " + messageId + ": " + e.getMessage());
+                // Use async send without waiting for each message
+                ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, key, value);
+                producer.send(record, (metadata, exception) -> {
+                    if (exception == null) {
+                        SUCCESS_COUNTER.incrementAndGet();
+                    } else {
+                        ERROR_COUNTER.incrementAndGet();
+                        System.err.println("Thread " + threadId + " error sending message: " + exception.getMessage());
+                    }
+                });
             }
+            
+            // Print progress every batch
+            System.out.println("Thread " + threadId + " progress: " + Math.min(i + BATCH_SIZE, messageCount) + "/" + messageCount);
         }
         
+        // Ensure all messages are sent before returning
+        producer.flush();
         System.out.println("Thread " + threadId + " completed sending " + messageCount + " messages");
     }
 }
