@@ -89,20 +89,20 @@ public class KafkaProducerApp {
         props.put("socket.connection.setup.timeout.ms", "3000");
         props.put("socket.connection.setup.timeout.max.ms", "5000");
 
-//        try (AdminClient adminClient = AdminClient.create(props)) {
-//            Optional<Integer> replicas=Optional.of(1);
-//            Optional<Short> repFactor=Optional.of(Short.parseShort("1"));
-//            NewTopic newTopic = new NewTopic(TOPIC_NAME, replicas,repFactor);
-//            CreateTopicsResult result = adminClient.createTopics(Collections.singleton(newTopic));
-//
-//            // The createTopics() method returns a future, so we need to wait for it to complete
-//            result.all().get();
-//            System.out.println("Topic '" + TOPIC_NAME + "' created successfully.");
-//
-//        } catch (InterruptedException | ExecutionException e) {
-//            System.err.println("Error creating topic: " + e.getMessage());
-//            System.exit(1);
-//        }
+        try (AdminClient adminClient = AdminClient.create(props)) {
+            Optional<Integer> replicas=Optional.of(1);
+            Optional<Short> repFactor=Optional.of(Short.parseShort("1"));
+            NewTopic newTopic = new NewTopic(TOPIC_NAME, replicas,repFactor);
+            CreateTopicsResult result = adminClient.createTopics(Collections.singleton(newTopic));
+
+            // The createTopics() method returns a future, so we need to wait for it to complete
+            result.all().get();
+            System.out.println("Topic '" + TOPIC_NAME + "' created successfully.");
+
+        } catch (InterruptedException | ExecutionException e) {
+            System.err.println("Error creating topic: " + e.getMessage());
+
+        }
 
         var startTime=System.currentTimeMillis();
 
