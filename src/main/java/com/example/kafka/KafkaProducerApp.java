@@ -62,13 +62,13 @@ public class KafkaProducerApp {
         // Set AWS region explicitly
         System.setProperty("aws.region", "us-east-1");
         
-        // Enable debug for auth issues
-        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "DEBUG");
-        System.setProperty("software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider.SDK_DEFAULT_CREDENTIALS_PROVIDER_CHAIN_DEBUG", "true");
-        
-        // Enable additional AWS debug logging
-        System.setProperty("org.slf4j.simpleLogger.log.org.apache.kafka", "DEBUG");
-        System.setProperty("org.slf4j.simpleLogger.log.software.amazon.msk", "DEBUG");
+//        // Enable debug for auth issues
+//        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "DEBUG");
+//        System.setProperty("software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider.SDK_DEFAULT_CREDENTIALS_PROVIDER_CHAIN_DEBUG", "true");
+//
+//        // Enable additional AWS debug logging
+//        System.setProperty("org.slf4j.simpleLogger.log.org.apache.kafka", "DEBUG");
+//        System.setProperty("org.slf4j.simpleLogger.log.software.amazon.msk", "DEBUG");
         
         // Print out AWS creds info to verify (without secrets)
 //        try {
