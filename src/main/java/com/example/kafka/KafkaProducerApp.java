@@ -131,7 +131,7 @@ public class KafkaProducerApp {
                 }
             }
             System.out.println("All messages sent successfully!");
-            System.out.println("time taken = " + ((System.currentTimeMillis()-startTime)/60));
+            System.out.println("time taken = " + ((System.currentTimeMillis()-startTime)/1000));
         }
     }
 }
