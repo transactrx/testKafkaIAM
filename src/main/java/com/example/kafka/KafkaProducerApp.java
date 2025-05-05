@@ -117,57 +117,63 @@ public class KafkaProducerApp {
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         CountDownLatch latch = new CountDownLatch(numThreads);
         
-        // Create and submit producer tasks
-        for (int i = 0; i < numThreads; i++) {
-            // Last thread gets any remaining messages
-            int threadMessages = messagesPerThread + (i == numThreads - 1 ? remainingMessages : 0);
-            int threadId = i + 1;
+        // Create a single shared KafkaProducer for all threads
+        try (KafkaProducer<String, String> sharedProducer = new KafkaProducer<>(props)) {
+            System.out.println("Created shared Kafka producer for all threads");
             
-            executor.submit(() -> {
-                try {
-                    produceMessages(props, threadId, threadMessages);
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-        
-        // Wait for all threads to complete
-        try {
-            latch.await();
-        } catch (InterruptedException e) {
-            System.err.println("Thread interrupted while waiting for completion: " + e.getMessage());
-        } finally {
-            executor.shutdown();
-        }
-    }
-    
-    private static void produceMessages(Properties props, int threadId, int messageCount) {
-        System.out.println("Thread " + threadId + " starting to send " + messageCount + " messages");
-        
-        try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
-            for (int i = 0; i < messageCount; i++) {
-                int messageId = MESSAGE_COUNTER.incrementAndGet();
-                String key = "key-" + messageId;
-                String value = "test message " + messageId + " (thread " + threadId + ")";
+            // Create and submit producer tasks
+            for (int i = 0; i < numThreads; i++) {
+                // Last thread gets any remaining messages
+                int threadMessages = messagesPerThread + (i == numThreads - 1 ? remainingMessages : 0);
+                int threadId = i + 1;
                 
-                ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, key, value);
-                
-                try {
-                    producer.send(record).get();
-                    SUCCESS_COUNTER.incrementAndGet();
-                    
-                    // Print progress every 1000 messages
-                    if (messageId % 1000 == 0) {
-                        System.out.println("Thread " + threadId + " progress: " + i + "/" + messageCount);
+                executor.submit(() -> {
+                    try {
+                        produceMessages(sharedProducer, threadId, threadMessages);
+                    } finally {
+                        latch.countDown();
                     }
-                } catch (InterruptedException | ExecutionException e) {
-                    ERROR_COUNTER.incrementAndGet();
-                    System.err.println("Thread " + threadId + " error sending message " + messageId + ": " + e.getMessage());
-                }
+                });
             }
             
-            System.out.println("Thread " + threadId + " completed sending " + messageCount + " messages");
+            // Wait for all threads to complete
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                System.err.println("Thread interrupted while waiting for completion: " + e.getMessage());
+            } finally {
+                executor.shutdown();
+            }
+            
+            System.out.println("All threads completed. Closing shared Kafka producer.");
+        } // sharedProducer will be automatically closed here
+    }
+    
+    private static void produceMessages(KafkaProducer<String, String> producer, int threadId, int messageCount) {
+        System.out.println("Thread " + threadId + " starting to send " + messageCount + " messages");
+        
+        for (int i = 0; i < messageCount; i++) {
+            int messageId = MESSAGE_COUNTER.incrementAndGet();
+            String key = "key-" + messageId;
+            String value = "test message " + messageId + " (thread " + threadId + ")";
+            
+            ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, key, value);
+            
+            try {
+                producer.send(record).get();
+                SUCCESS_COUNTER.incrementAndGet();
+                
+                // Print progress every 1000 messages
+                if (messageId % 1000 == 0) {
+                    System.out.println("Thread " + threadId + " progress: " + i + "/" + messageCount);
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                ERROR_COUNTER.incrementAndGet();
+                System.err.println("Thread " + threadId + " error sending message " + messageId + ": " + e.getMessage());
+            }
         }
+        
+        System.out.println("Thread " + threadId + " completed sending " + messageCount + " messages");
+    }
     }
 }
