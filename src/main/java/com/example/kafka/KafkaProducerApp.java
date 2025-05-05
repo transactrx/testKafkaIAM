@@ -3,6 +3,7 @@ package com.example.kafka;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -10,17 +11,42 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-
-// Add AWS region provider
-//import com.amazonaws.regions.Regions;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class KafkaProducerApp {
     private static final String TOPIC_NAME = "test_iam";
-
     private static final String BOOTSTRAP_SERVERS ="boot-ahs.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099,boot-8rg.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100,boot-rce.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098";
+    private static final AtomicInteger MESSAGE_COUNTER = new AtomicInteger(0);
+    private static final AtomicInteger SUCCESS_COUNTER = new AtomicInteger(0);
+    private static final AtomicInteger ERROR_COUNTER = new AtomicInteger(0);
 
     public static void main(String[] args) {
+        int numThreads = 4; // Default number of threads
+        int totalMessages = 50000; // Default total number of messages
+
+        // Parse command line arguments if provided
+        if (args.length >= 1) {
+            try {
+                numThreads = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid number of threads, using default: " + numThreads);
+            }
+        }
+        
+        if (args.length >= 2) {
+            try {
+                totalMessages = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid number of messages, using default: " + totalMessages);
+            }
+        }
+        
+        System.out.println("Using " + numThreads + " threads to send " + totalMessages + " messages");
+
         // Create producer properties
         Properties props = new Properties();
         
@@ -45,37 +71,8 @@ public class KafkaProducerApp {
         // Add debugging settings for Kafka client
         props.put("debug", "auth,security");
         
-        // Add connection timeouts
-
-        
-        // Add SSL configs - special handling for AWS MSK IAM authentication
-//        props.put("ssl.protocol", "TLSv1.2");
-//        props.put("ssl.enabled.protocols", "TLSv1.2");
-//        props.put("ssl.endpoint.identification.algorithm", "https");
-//
-//        // Use the default Java truststore for Amazon trust
-//        props.put("ssl.truststore.type", "JKS");
-        
         // Set AWS region explicitly
         System.setProperty("aws.region", "us-east-1");
-        
-//        // Enable debug for auth issues
-//        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "DEBUG");
-//        System.setProperty("software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider.SDK_DEFAULT_CREDENTIALS_PROVIDER_CHAIN_DEBUG", "true");
-//
-//        // Enable additional AWS debug logging
-//        System.setProperty("org.slf4j.simpleLogger.log.org.apache.kafka", "DEBUG");
-//        System.setProperty("org.slf4j.simpleLogger.log.software.amazon.msk", "DEBUG");
-        
-        // Print out AWS creds info to verify (without secrets)
-//        try {
-//            com.amazonaws.auth.AWSCredentialsProvider provider = new com.amazonaws.auth.DefaultAWSCredentialsProviderChain();
-//            com.amazonaws.auth.AWSCredentials credentials = provider.getCredentials();
-//            System.out.println("AWS credentials loaded successfully: " + credentials.getAWSAccessKeyId().substring(0, 5) + "...");
-//        } catch (Exception e) {
-//            System.err.println("Error loading AWS credentials: " + e.getMessage());
-//            e.printStackTrace();
-//        }
         
         // Set much shorter client timeout values for quicker failure detection
         props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, "5000");
@@ -88,9 +85,9 @@ public class KafkaProducerApp {
         props.put("socket.connection.setup.timeout.max.ms", "5000");
 
         try (AdminClient adminClient = AdminClient.create(props)) {
-            Optional<Integer> replicas=Optional.of(1);
-            Optional<Short> repFactor=Optional.of(Short.parseShort("1"));
-            NewTopic newTopic = new NewTopic(TOPIC_NAME, replicas,repFactor);
+            Optional<Integer> replicas = Optional.of(1);
+            Optional<Short> repFactor = Optional.of(Short.parseShort("1"));
+            NewTopic newTopic = new NewTopic(TOPIC_NAME, replicas, repFactor);
             CreateTopicsResult result = adminClient.createTopics(Collections.singleton(newTopic));
 
             // The createTopics() method returns a future, so we need to wait for it to complete
@@ -99,37 +96,78 @@ public class KafkaProducerApp {
 
         } catch (InterruptedException | ExecutionException e) {
             System.err.println("Error creating topic: " + e.getMessage());
-
         }
 
-        var startTime=System.currentTimeMillis();
-
-        try (org.apache.kafka.clients.producer.KafkaProducer<String, String> producer = 
-                new org.apache.kafka.clients.producer.KafkaProducer<>(props)) {
-
-            // Send 5 test messages
-            System.out.println("sending messages");
-            startTime=System.currentTimeMillis();
-            for (int i = 1; i <= 50000; i++) {
-                String key = "key-" + i;
-                String value = "test message " + i;
+        // Start the multi-threaded message production
+        long startTime = System.currentTimeMillis();
+        sendMessagesMultiThreaded(props, numThreads, totalMessages);
+        long endTime = System.currentTimeMillis();
+        
+        System.out.println("All messages sent: " + SUCCESS_COUNTER.get() + " successful, " + 
+                          ERROR_COUNTER.get() + " failed");
+        System.out.println("Time taken = " + ((endTime - startTime) / 1000) + " seconds");
+    }
+    
+    private static void sendMessagesMultiThreaded(Properties props, int numThreads, int totalMessages) {
+        // Calculate messages per thread
+        int messagesPerThread = totalMessages / numThreads;
+        int remainingMessages = totalMessages % numThreads;
+        
+        // Create thread pool
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        CountDownLatch latch = new CountDownLatch(numThreads);
+        
+        // Create and submit producer tasks
+        for (int i = 0; i < numThreads; i++) {
+            // Last thread gets any remaining messages
+            int threadMessages = messagesPerThread + (i == numThreads - 1 ? remainingMessages : 0);
+            int threadId = i + 1;
+            
+            executor.submit(() -> {
+                try {
+                    produceMessages(props, threadId, threadMessages);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        
+        // Wait for all threads to complete
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            System.err.println("Thread interrupted while waiting for completion: " + e.getMessage());
+        } finally {
+            executor.shutdown();
+        }
+    }
+    
+    private static void produceMessages(Properties props, int threadId, int messageCount) {
+        System.out.println("Thread " + threadId + " starting to send " + messageCount + " messages");
+        
+        try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
+            for (int i = 0; i < messageCount; i++) {
+                int messageId = MESSAGE_COUNTER.incrementAndGet();
+                String key = "key-" + messageId;
+                String value = "test message " + messageId + " (thread " + threadId + ")";
                 
-//                System.out.println("Sending: (" + key + ", " + value + ")");
+                ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, key, value);
                 
-                ProducerRecord<String, String> record = 
-                    new ProducerRecord<>(TOPIC_NAME, key, value);
-                
-                // Send record and get metadata (blocking call)
                 try {
                     producer.send(record).get();
-//                    System.out.println("Message " + i + " sent successfully");
+                    SUCCESS_COUNTER.incrementAndGet();
+                    
+                    // Print progress every 1000 messages
+                    if (messageId % 1000 == 0) {
+                        System.out.println("Thread " + threadId + " progress: " + i + "/" + messageCount);
+                    }
                 } catch (InterruptedException | ExecutionException e) {
-                    System.err.println("Error sending message " + i);
-                    e.printStackTrace();
+                    ERROR_COUNTER.incrementAndGet();
+                    System.err.println("Thread " + threadId + " error sending message " + messageId + ": " + e.getMessage());
                 }
             }
-            System.out.println("All messages sent successfully!");
-            System.out.println("time taken = " + ((System.currentTimeMillis()-startTime)/1000));
+            
+            System.out.println("Thread " + threadId + " completed sending " + messageCount + " messages");
         }
     }
 }
