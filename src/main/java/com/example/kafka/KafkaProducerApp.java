@@ -175,5 +175,4 @@ public class KafkaProducerApp {
         
         System.out.println("Thread " + threadId + " completed sending " + messageCount + " messages");
     }
-    }
 }
