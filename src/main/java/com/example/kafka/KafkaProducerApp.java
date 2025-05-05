@@ -37,7 +37,7 @@ public class KafkaProducerApp {
         props.put("sasl.mechanism", "AWS_MSK_IAM");
         
         // Binds SASL client implementation.
-        props.put("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required");
+        props.put("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required;");
         
         // Encapsulates constructing a SigV4 signature based on extracted credentials.
         // The SASL client bound by "sasl.jaas.config" invokes this class.
