@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutionException;
 public class KafkaProducerApp {
     private static final String TOPIC_NAME = "test_iam";
 
-    private static final String BOOTSTRAP_SERVERS ="boot-7xl.iam.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100,boot-yv7.iam.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099,boot-3om.iam.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098";
+    private static final String BOOTSTRAP_SERVERS ="boot-ahs.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099,boot-8rg.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100,boot-rce.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098";
 
     public static void main(String[] args) {
         // Create producer properties
@@ -32,14 +32,14 @@ public class KafkaProducerApp {
         props.put("security.protocol", "SASL_SSL");
         
         // Identifies the SASL mechanism to use.
-        props.put("sasl.mechanism", "AWS_MSK_IAM");
+        props.put("sasl.mechanism", "SCRAM-SHA-512");
         
         // Binds SASL client implementation.
-        props.put("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required;");
+        props.put("sasl.jaas.config", "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"melaraj\" password=\"MaherManuco99\";");
         
         // Encapsulates constructing a SigV4 signature based on extracted credentials.
         // The SASL client bound by "sasl.jaas.config" invokes this class.
-        props.put("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMClientCallbackHandler");
+        //props.put("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMClientCallbackHandler");
 
         
         // Add debugging settings for Kafka client
