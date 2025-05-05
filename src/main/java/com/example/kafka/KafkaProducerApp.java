@@ -114,7 +114,7 @@ public class KafkaProducerApp {
                 String key = "key-" + i;
                 String value = "test message " + i;
                 
-                System.out.println("Sending: (" + key + ", " + value + ")");
+//                System.out.println("Sending: (" + key + ", " + value + ")");
                 
                 ProducerRecord<String, String> record = 
                     new ProducerRecord<>(TOPIC_NAME, key, value);
