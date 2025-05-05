@@ -46,6 +46,13 @@ public class KafkaProducerApp {
         }
         
         System.out.println("Using " + numThreads + " threads to send " + totalMessages + " messages");
+        System.out.println("Command line arguments received: " + (args.length > 0 ? args.length : "none"));
+        if (args.length > 0) {
+            System.out.println("Args[0]: " + args[0]);
+        }
+        if (args.length > 1) {
+            System.out.println("Args[1]: " + args[1]);
+        }
 
         // Create producer properties
         Properties props = new Properties();
