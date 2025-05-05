@@ -34,15 +34,15 @@ public class KafkaProducerApp {
         props.put("security.protocol", "SASL_SSL");
         
         // Identifies the SASL mechanism to use.
-        props.put("sasl.mechanism", "OAUTHBEARER");
+        props.put("sasl.mechanism", "AWS_MSK_IAM");
         
         // Binds SASL client implementation.
-        props.put("sasl.jaas.config", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
+        props.put("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required");
         
         // Encapsulates constructing a SigV4 signature based on extracted credentials.
         // The SASL client bound by "sasl.jaas.config" invokes this class.
-        props.put("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMOAuthBearerLoginCallbackHandler");
-        props.put("sasl.login.callback.handler.class", "software.amazon.msk.auth.iam.IAMOAuthBearerLoginCallbackHandler");
+        props.put("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMClientCallbackHandler");
+
         
         // Add debugging settings for Kafka client
         props.put("debug", "auth,security");
@@ -110,6 +110,7 @@ public class KafkaProducerApp {
                 new org.apache.kafka.clients.producer.KafkaProducer<>(props)) {
 
             // Send 5 test messages
+            System.out.println("sending messages");
             for (int i = 1; i <= 50000; i++) {
                 String key = "key-" + i;
                 String value = "test message " + i;
