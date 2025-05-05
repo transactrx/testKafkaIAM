@@ -104,12 +104,14 @@ public class KafkaProducerApp {
 //            System.exit(1);
 //        }
 
+        var startTime=System.currentTimeMillis();
 
         try (org.apache.kafka.clients.producer.KafkaProducer<String, String> producer = 
                 new org.apache.kafka.clients.producer.KafkaProducer<>(props)) {
 
             // Send 5 test messages
             System.out.println("sending messages");
+            startTime=System.currentTimeMillis();
             for (int i = 1; i <= 50000; i++) {
                 String key = "key-" + i;
                 String value = "test message " + i;
@@ -128,8 +130,8 @@ public class KafkaProducerApp {
                     e.printStackTrace();
                 }
             }
-            
             System.out.println("All messages sent successfully!");
+            System.out.println("time taken = " + ((System.currentTimeMillis()-startTime)/60));
         }
     }
 }
