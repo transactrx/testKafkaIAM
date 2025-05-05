@@ -110,7 +110,7 @@ public class KafkaProducerApp {
                 new org.apache.kafka.clients.producer.KafkaProducer<>(props)) {
 
             // Send 5 test messages
-            for (int i = 1; i <= 5; i++) {
+            for (int i = 1; i <= 50000; i++) {
                 String key = "key-" + i;
                 String value = "test message " + i;
                 
@@ -122,7 +122,7 @@ public class KafkaProducerApp {
                 // Send record and get metadata (blocking call)
                 try {
                     producer.send(record).get();
-                    System.out.println("Message " + i + " sent successfully");
+//                    System.out.println("Message " + i + " sent successfully");
                 } catch (InterruptedException | ExecutionException e) {
                     System.err.println("Error sending message " + i);
                     e.printStackTrace();
