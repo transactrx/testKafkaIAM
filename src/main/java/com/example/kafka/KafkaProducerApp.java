@@ -48,8 +48,7 @@ public class KafkaProducerApp {
         props.put("debug", "auth,security");
         
         // Add connection timeouts
-        props.put("socket.connection.setup.timeout.ms", "10000");
-        props.put("connections.max.idle.ms", "60000");
+
         
         // Add SSL configs - special handling for AWS MSK IAM authentication
 //        props.put("ssl.protocol", "TLSv1.2");
