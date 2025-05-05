@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class KafkaProducerApp {
     private static final String TOPIC_NAME = "test_iam";
     //private static final String BOOTSTRAP_SERVERS ="boot-ahs.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099,boot-8rg.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100,boot-rce.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098";
-    private static final String BOOTSTRAP_SERVERS ="boot-9cd.powerlinedevkafka.f86dog.c19.kafka.us-east-1.amazonaws.com:9096,boot-jg2.powerlinedevkafka.f86dog.c19.kafka.us-east-1.amazonaws.com:9096,boot-3pg.powerlinedevkafka.f86dog.c19.kafka.us-east-1.amazonaws.com:9096";
+    private static final String BOOTSTRAP_SERVERS ="b-1.powerlinedevkafka.ssvk5i.c19.kafka.us-east-1.amazonaws.com:9096,b-2.powerlinedevkafka.ssvk5i.c19.kafka.us-east-1.amazonaws.com:9096,b-3.powerlinedevkafka.ssvk5i.c19.kafka.us-east-1.amazonaws.com:9096";
     private static final AtomicInteger MESSAGE_COUNTER = new AtomicInteger(0);
     private static final AtomicInteger SUCCESS_COUNTER = new AtomicInteger(0);
     private static final AtomicInteger ERROR_COUNTER = new AtomicInteger(0);
@@ -93,7 +93,7 @@ public class KafkaProducerApp {
         props.put("socket.connection.setup.timeout.max.ms", "5000");
 
         try (AdminClient adminClient = AdminClient.create(props)) {
-            Optional<Integer> replicas = Optional.of(1);
+            Optional<Integer> replicas = Optional.of(10);
             Optional<Short> repFactor = Optional.of(Short.parseShort("1"));
             NewTopic newTopic = new NewTopic(TOPIC_NAME, replicas, repFactor);
             CreateTopicsResult result = adminClient.createTopics(Collections.singleton(newTopic));
