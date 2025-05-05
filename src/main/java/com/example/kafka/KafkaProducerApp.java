@@ -17,10 +17,8 @@ import java.util.concurrent.ExecutionException;
 
 public class KafkaProducerApp {
     private static final String TOPIC_NAME = "test_iam";
-    private static final String BOOTSTRAP_SERVERS = 
-        "boot-3om.iam.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098," +
-        "boot-7xl.iam.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100," +
-        "boot-yv7.iam.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099";
+
+    private static final String BOOTSTRAP_SERVERS ="boot-7xl.iam.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100,boot-yv7.iam.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099,boot-3om.iam.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098"
 
     public static void main(String[] args) {
         // Create producer properties
