@@ -19,7 +19,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class KafkaProducerApp {
     private static final String TOPIC_NAME = "test_iam";
-    private static final String BOOTSTRAP_SERVERS ="boot-ahs.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099,boot-8rg.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100,boot-rce.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098";
+    //private static final String BOOTSTRAP_SERVERS ="boot-ahs.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099,boot-8rg.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100,boot-rce.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098";
+    private static final String BOOTSTRAP_SERVERS ="b-2.devkafka.kgdjl3.c19.kafka.us-east-1.amazonaws.com:9096,b-1.devkafka.kgdjl3.c19.kafka.us-east-1.amazonaws.com:9096,b-3.devkafka.kgdjl3.c19.kafka.us-east-1.amazonaws.com:9096";
     private static final AtomicInteger MESSAGE_COUNTER = new AtomicInteger(0);
     private static final AtomicInteger SUCCESS_COUNTER = new AtomicInteger(0);
     private static final AtomicInteger ERROR_COUNTER = new AtomicInteger(0);
