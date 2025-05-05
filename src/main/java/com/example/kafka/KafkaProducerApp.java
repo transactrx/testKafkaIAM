@@ -13,7 +13,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 // Add AWS region provider
-import com.amazonaws.regions.Regions;
+//import com.amazonaws.regions.Regions;
 
 public class KafkaProducerApp {
     private static final String TOPIC_NAME = "test_iam";
@@ -60,7 +60,7 @@ public class KafkaProducerApp {
 //        props.put("ssl.truststore.type", "JKS");
         
         // Set AWS region explicitly
-        System.setProperty("aws.region", Regions.US_EAST_1.getName());
+        System.setProperty("aws.region", "us-east-1");
         
         // Enable debug for auth issues
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "DEBUG");
@@ -71,14 +71,14 @@ public class KafkaProducerApp {
         System.setProperty("org.slf4j.simpleLogger.log.software.amazon.msk", "DEBUG");
         
         // Print out AWS creds info to verify (without secrets)
-        try {
-            com.amazonaws.auth.AWSCredentialsProvider provider = new com.amazonaws.auth.DefaultAWSCredentialsProviderChain();
-            com.amazonaws.auth.AWSCredentials credentials = provider.getCredentials();
-            System.out.println("AWS credentials loaded successfully: " + credentials.getAWSAccessKeyId().substring(0, 5) + "...");
-        } catch (Exception e) {
-            System.err.println("Error loading AWS credentials: " + e.getMessage());
-            e.printStackTrace();
-        }
+//        try {
+//            com.amazonaws.auth.AWSCredentialsProvider provider = new com.amazonaws.auth.DefaultAWSCredentialsProviderChain();
+//            com.amazonaws.auth.AWSCredentials credentials = provider.getCredentials();
+//            System.out.println("AWS credentials loaded successfully: " + credentials.getAWSAccessKeyId().substring(0, 5) + "...");
+//        } catch (Exception e) {
+//            System.err.println("Error loading AWS credentials: " + e.getMessage());
+//            e.printStackTrace();
+//        }
         
         // Set much shorter client timeout values for quicker failure detection
         props.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, "5000");
