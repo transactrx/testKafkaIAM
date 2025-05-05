@@ -93,8 +93,8 @@ public class KafkaProducerApp {
         props.put("socket.connection.setup.timeout.max.ms", "5000");
 
         try (AdminClient adminClient = AdminClient.create(props)) {
-            Optional<Integer> replicas = Optional.of(10);
-            Optional<Short> repFactor = Optional.of(Short.parseShort("1"));
+            Optional<Integer> replicas = Optional.of(1);
+            Optional<Short> repFactor = Optional.of(Short.parseShort("10"));
             NewTopic newTopic = new NewTopic(TOPIC_NAME, replicas, repFactor);
             CreateTopicsResult result = adminClient.createTopics(Collections.singleton(newTopic));
 
