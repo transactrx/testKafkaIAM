@@ -162,7 +162,7 @@ public class KafkaProducerApp {
         for (int i = 0; i < messageCount; i++) {
             int messageId = MESSAGE_COUNTER.incrementAndGet();
             String key = "key-" + messageId;
-            String value = "test message " + messageId + " (thread " + threadId + ")";
+            String value = "asd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsdasd1231asdasdas asdass asd ds sdsd";
             
             ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, key, value);
             
