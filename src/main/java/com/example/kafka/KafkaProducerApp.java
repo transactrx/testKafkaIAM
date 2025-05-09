@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class KafkaProducerApp {
-    private static final String TOPIC_NAME = "exchange.testingtesting";
+    private static final String TOPIC_NAME = "exchange.test2";
     //private static final String BOOTSTRAP_SERVERS ="boot-ahs.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14099,boot-8rg.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14100,boot-rce.scram.powerlinedevkafka.u02dwn.c3.kafka.us-east-1.amazonaws.com:14098";
     private static final String BOOTSTRAP_SERVERS ="boot-3b6.scram.powerlineprodkafka.8krrxd.c19.kafka.us-east-1.amazonaws.com:14100,boot-zcw.scram.powerlineprodkafka.8krrxd.c19.kafka.us-east-1.amazonaws.com:14099,boot-j6p.scram.powerlineprodkafka.8krrxd.c19.kafka.us-east-1.amazonaws.com:14098";
     private static final AtomicInteger MESSAGE_COUNTER = new AtomicInteger(0);
@@ -26,7 +26,7 @@ public class KafkaProducerApp {
     private static final AtomicInteger ERROR_COUNTER = new AtomicInteger(0);
 
     public static void main(String[] args) {
-        int numThreads = 32; // Default: match number of partitions for optimal parallelism
+        int numThreads = 64; // Default: match number of partitions for optimal parallelism
         int totalMessages = 50000; // Default total number of messages
 
         // Parse command line arguments if provided
